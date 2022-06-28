@@ -53,34 +53,31 @@ public class ContainerBookingService {
 	}
 
 	private Mono<ContainerBookingReference> getNewReferenceBooking(ContainerBooking entity) {
-		Long nextReferenceId = getNextReferenceNumber();
-		// It formats the number to have 19 digits adding leading zeros if necessary
-		String formattedReference = String.format(BOOKING_REFERENCE_FORMAT, nextReferenceId);
-		return bookingReferenceRepository.save(new ContainerBookingReference(formattedReference, entity.getId()));
+		return  getNextReferenceNumber()//
+				.flatMap( nextReferenceNumber -> Mono.just(createNewBookingReference(entity, nextReferenceNumber)))//
+				.flatMap( bookingReference -> bookingReferenceRepository.save(bookingReference));
 	}
 
-	// The synchronized prevents against race conditions here in this node, but not
-	// if there is multiple nodes.
-	// That is why we confirm the allocation of the next reference available using
-	// this update against the key table.
-	private synchronized Long getNextReferenceNumber() {
-		Long latest = entityReferenceRepository.getLatestReference(BOOKING_REFERENCE_NAME);
-		long nextReference = latest + 1;
-		// ensure that the key we got is valid as latest still
-		Object updateReference = entityReferenceRepository.updateReference(BOOKING_REFERENCE_FORMAT, nextReference);
-		if (updateReference != null) {
-			return nextReference;
-		} else {
-			// Recursive, try again until we get a valid, unused and unique key.
-			// We could have some retry logic to set a max attempts, I it will not be
-			// implemented in this demo.
-			return getNextReferenceNumber();
-		}
+	private ContainerBookingReference createNewBookingReference(ContainerBooking entity, Long nextReferenceNumber) {
+		// It formats the number to have 19 digits adding leading zeros if necessary
+		String formattedReferenceNumber = String.format(BOOKING_REFERENCE_FORMAT, nextReferenceNumber);
+		return new ContainerBookingReference( formattedReferenceNumber, entity.getId());
+	}
+
+	// In case of Race condition, we confirm the allocation of the next reference
+	// available using an update against the key table.
+	private Mono<Long> getNextReferenceNumber() {
+		return entityReferenceRepository.findByName(BOOKING_REFERENCE_NAME)//
+				.log()
+				.flatMap(ref -> entityReferenceRepository.updateReference(BOOKING_REFERENCE_NAME, ref.getNext()))//
+				.log()
+				.retry(5)// 5 retries to get a new ID
+				.flatMap(ref -> Mono.just(ref.getCurrent()));
 	}
 
 	public Mono<AvailableBookingDto> isAvailable(ContainerBookingDto booking) {
 		try {
-			int containersAvailableInYard = getContainersAvailableInYard(booking); // unboxing
+			int containersAvailableInYard = getContainersAvailableInYard(booking); 
 			return Mono.just(new AvailableBookingDto(containersAvailableInYard > 0));
 		} catch (Exception e) {
 			return Mono.error(() -> e);

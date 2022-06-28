@@ -32,7 +32,6 @@ public class CassandraConfig extends AbstractReactiveCassandraConfiguration {
 	protected List<CreateKeyspaceSpecification> getKeyspaceCreations() {
 		CreateKeyspaceSpecification specification = CreateKeyspaceSpecification.createKeyspace(keySpace).ifNotExists()
 				.with(KeyspaceOption.DURABLE_WRITES, true);
-
 		return Arrays.asList(specification);
 	}
 
