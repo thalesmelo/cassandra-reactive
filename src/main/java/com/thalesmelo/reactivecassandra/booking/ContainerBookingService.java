@@ -13,8 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.thalesmelo.reactivecassandra.booking.api.ContainerBookingDto;
 import com.thalesmelo.reactivecassandra.booking.api.ContainerBookingReferenceDto;
+import com.thalesmelo.reactivecassandra.config.ContainerBookingDto;
 import com.thalesmelo.reactivecassandra.db.EntityReferenceRepository;
 import com.thalesmelo.reactivecassandra.integrations.InvalidExternalServiceResponseException;
 
@@ -67,7 +67,7 @@ public class ContainerBookingService {
 	// In case of Race condition, we confirm the allocation of the next reference
 	// available using an update against the key table.
 	private Mono<Long> getNextReferenceNumber() {
-		return entityReferenceRepository.findByName(BOOKING_REFERENCE_NAME)//
+		return entityReferenceRepository.findByEntityName(BOOKING_REFERENCE_NAME)//
 				.log()
 				.flatMap(ref -> entityReferenceRepository.updateReference(BOOKING_REFERENCE_NAME, ref.getNext()))//
 				.log()

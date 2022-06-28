@@ -1,8 +1,8 @@
 package com.thalesmelo.reactivecassandra.booking;
 
 import com.thalesmelo.reactivecassandra.booking.ContainerBooking.ContainerType;
-import com.thalesmelo.reactivecassandra.booking.api.ContainerBookingDto;
 import com.thalesmelo.reactivecassandra.booking.api.ContainerBookingReferenceDto;
+import com.thalesmelo.reactivecassandra.config.ContainerBookingDto;
 
 public class BookingModelMapper {
 

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.thalesmelo.reactivecassandra.booking.AvailableBookingDto;
 import com.thalesmelo.reactivecassandra.booking.ContainerBookingService;
+import com.thalesmelo.reactivecassandra.config.ContainerBookingDto;
 
 import reactor.core.publisher.Mono;
 

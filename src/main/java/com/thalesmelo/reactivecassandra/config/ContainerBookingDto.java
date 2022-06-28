@@ -1,4 +1,4 @@
-package com.thalesmelo.reactivecassandra.booking.api;
+package com.thalesmelo.reactivecassandra.config;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;

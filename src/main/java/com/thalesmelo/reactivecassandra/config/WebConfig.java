@@ -1,4 +1,4 @@
-package com.thalesmelo.reactivecassandra;
+package com.thalesmelo.reactivecassandra.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.config.EnableWebFlux;
