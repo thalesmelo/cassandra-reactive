@@ -1,4 +1,4 @@
-package com.thalesmelo.reactivecassandra.booking.pi;
+package com.thalesmelo.reactivecassandra.booking.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

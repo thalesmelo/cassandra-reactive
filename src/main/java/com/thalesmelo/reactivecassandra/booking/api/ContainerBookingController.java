@@ -1,4 +1,4 @@
-package com.thalesmelo.reactivecassandra.booking.pi;
+package com.thalesmelo.reactivecassandra.booking.api;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.thalesmelo.reactivecassandra.booking.AvailableBookingDto;
 import com.thalesmelo.reactivecassandra.booking.ContainerBookingService;
 
 import reactor.core.publisher.Mono;
@@ -18,7 +19,7 @@ public class ContainerBookingController {
 	ContainerBookingService containerBookingService;
 
 	@PostMapping("/available")
-	public Mono<Boolean> isAvailable(@RequestBody ContainerBookingDto booking) {
+	public Mono<AvailableBookingDto> isAvailable(@RequestBody ContainerBookingDto booking) {
 		return containerBookingService.isAvailable(booking);
 	}
 

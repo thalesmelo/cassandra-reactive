@@ -13,7 +13,7 @@ import org.springframework.data.cassandra.core.cql.keyspace.KeyspaceOption;
 import org.springframework.data.cassandra.repository.config.EnableReactiveCassandraRepositories;
 
 @Configuration
-@EnableReactiveCassandraRepositories(basePackageClasses = { CassandraConfig.class })
+@EnableReactiveCassandraRepositories(basePackages ={"com.thalesmelo.reactivecassandra"})
 public class CassandraConfig extends AbstractReactiveCassandraConfiguration {
 
 	@Value("${spring.data.cassandra.keyspace-name}")

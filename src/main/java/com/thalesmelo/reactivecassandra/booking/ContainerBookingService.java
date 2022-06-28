@@ -2,9 +2,8 @@ package com.thalesmelo.reactivecassandra.booking;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.UUID;
+import java.util.Objects;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -14,8 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.thalesmelo.reactivecassandra.booking.pi.ContainerBookingDto;
-import com.thalesmelo.reactivecassandra.booking.pi.ContainerBookingReferenceDto;
+import com.thalesmelo.reactivecassandra.booking.api.ContainerBookingDto;
+import com.thalesmelo.reactivecassandra.booking.api.ContainerBookingReferenceDto;
 import com.thalesmelo.reactivecassandra.db.EntityReferenceRepository;
 import com.thalesmelo.reactivecassandra.integrations.InvalidExternalServiceResponseException;
 
@@ -40,30 +39,30 @@ public class ContainerBookingService {
 	@Autowired
 	private RestTemplate externalService;
 
-	@Autowired
-	private ModelMapper mapper;
-
 	@Value("${external.service.check.container.availabilty.url}")
 	private String externalServiceUrl;
 
 	public Mono<ContainerBookingReferenceDto> createBooking(ContainerBookingDto dto) {
-		try {
-			ContainerBooking entity = mapper.map(validate(dto), ContainerBooking.class);
-			repository.save(entity);
-			Mono<ContainerBookingReference> newReferenceBooking = getNewReferenceBooking(entity.getId());
-			return Mono.just(mapper.map(newReferenceBooking, ContainerBookingReferenceDto.class));
+		BookingModelMapper mapper = new BookingModelMapper();
 
-		} catch (Exception e) {
-			return Mono.error(() -> e);
-		}
+		ContainerBooking containerBooking = mapper.map(validate(dto));
+		return repository.save(containerBooking)//
+				.log()//
+				.flatMap(entity -> getNewReferenceBooking(entity))//
+				.flatMap(reference -> Mono.just(mapper.map(reference)));
 	}
 
-	private Mono<ContainerBookingReference> getNewReferenceBooking(UUID entityId) {
+	private Mono<ContainerBookingReference> getNewReferenceBooking(ContainerBooking entity) {
 		Long nextReferenceId = getNextReferenceNumber();
-		String nextReference = String.format(BOOKING_REFERENCE_FORMAT, nextReferenceId);
-		return bookingReferenceRepository.save(new ContainerBookingReference(nextReference, entityId));
+		// It formats the number to have 19 digits adding leading zeros if necessary
+		String formattedReference = String.format(BOOKING_REFERENCE_FORMAT, nextReferenceId);
+		return bookingReferenceRepository.save(new ContainerBookingReference(formattedReference, entity.getId()));
 	}
 
+	// The synchronized prevents against race conditions here in this node, but not
+	// if there is multiple nodes.
+	// That is why we confirm the allocation of the next reference available using
+	// this update against the key table.
 	private synchronized Long getNextReferenceNumber() {
 		Long latest = entityReferenceRepository.getLatestReference(BOOKING_REFERENCE_NAME);
 		long nextReference = latest + 1;
@@ -79,10 +78,10 @@ public class ContainerBookingService {
 		}
 	}
 
-	public Mono<Boolean> isAvailable(ContainerBookingDto booking) {
+	public Mono<AvailableBookingDto> isAvailable(ContainerBookingDto booking) {
 		try {
 			int containersAvailableInYard = getContainersAvailableInYard(booking); // unboxing
-			return Mono.just(containersAvailableInYard > 0);
+			return Mono.just(new AvailableBookingDto(containersAvailableInYard > 0));
 		} catch (Exception e) {
 			return Mono.error(() -> e);
 		}
@@ -103,7 +102,30 @@ public class ContainerBookingService {
 		}
 	}
 
+	/**
+	 * This could have been done in the entity on the eDAO layer using the
+	 * annotations, it could have been also done in the rest layer. But here is a
+	 * good place to ensure no invalid data goes through the business layer
+	 */
 	private ContainerBookingDto validate(ContainerBookingDto dto) {
+		Objects.requireNonNull(dto);
+		Objects.requireNonNull(dto.getContainerType());
+		// Origin
+		if (dto.getOrigin().length() < 5 || dto.getOrigin().length() > 20) {
+			throw new IllegalArgumentException("Origin length should be between 5 and 20");
+		}
+		// Destination
+		if (dto.getDestination().length() < 5 || dto.getDestination().length() > 20) {
+			throw new IllegalArgumentException("Destination length should be between 5 and 20");
+		}
+		// Container size
+		if (dto.getContainerSize() != 20 || dto.getContainerSize() != 40) {
+			throw new IllegalArgumentException("Container size should be 20 or 40");
+		}
+		// QUantity
+		if (dto.getQuantity() < 1 || dto.getContainerSize() > 100) {
+			throw new IllegalArgumentException("Container size should be between 1 and 100");
+		}
 		return dto;
 	}
 

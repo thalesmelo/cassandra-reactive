@@ -1,0 +1,5 @@
+Issues
+	Improve Handing Web Exceptions
+	Do more tests (Unit/Integration)
+	Improve mapping of booking objects
+	Fix potential zombie object without reference if error in save reference
