@@ -116,7 +116,7 @@ public class ContainerBookingService {
 			throw new IllegalArgumentException("Destination length should be between 5 and 20");
 		}
 		// Container size
-		if (dto.getContainerSize() != 20 || dto.getContainerSize() != 40) {
+		if (dto.getContainerSize() != 20 && dto.getContainerSize() != 40) {
 			throw new IllegalArgumentException("Container size should be 20 or 40");
 		}
 		// QUantity

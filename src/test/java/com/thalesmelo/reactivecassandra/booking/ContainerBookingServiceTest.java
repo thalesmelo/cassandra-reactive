@@ -1,6 +1,8 @@
 package com.thalesmelo.reactivecassandra.booking;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -16,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.thalesmelo.reactivecassandra.booking.ContainerBooking.ContainerType;
 import com.thalesmelo.reactivecassandra.config.ContainerBookingDto;
+import com.thalesmelo.reactivecassandra.db.EntityReference;
 import com.thalesmelo.reactivecassandra.db.EntityReferenceRepository;
 
 import reactor.core.publisher.Mono;
@@ -42,8 +45,14 @@ public class ContainerBookingServiceTest {
 
 	@Test
 	public void givenMockingIsDoneByMockito_whenGetIsCalled_shouldReturnMockedObject() {
+
+		Mockito.when(entityReferenceRepository.init(anyString())).thenAnswer(i -> Mono.just(getReference(0L)));
+
+		Mockito.when(entityReferenceRepository.updateReference(anyString(), anyLong()))
+				.thenAnswer(i -> Mono.just(getReference(1L)));
 		
-		Mockito.when(entityReferenceRepository.save(any())).thenAnswer(i -> Mono.just(i.getArguments()[0]));
+		Mockito.when(externalService.postForEntity(any(), any(),any()))
+		.thenAnswer(i -> ResponseEntity.ok(2));
 
 		Mockito.when(externalService.getForEntity("https://maersk.com/api/bookings/checkAvailable", Integer.class))
 				.thenReturn(new ResponseEntity(1, HttpStatus.OK));
@@ -53,5 +62,9 @@ public class ContainerBookingServiceTest {
 		Mono<AvailableBookingDto> mono = service.isAvailable(booking);
 
 		StepVerifier.create(mono).expectNext(new AvailableBookingDto(true)).verifyComplete();
+	}
+
+	private EntityReference getReference(Long current) {
+		return new EntityReference(ContainerBookingReference.class.getSimpleName(), current, current + 1);
 	}
 }
