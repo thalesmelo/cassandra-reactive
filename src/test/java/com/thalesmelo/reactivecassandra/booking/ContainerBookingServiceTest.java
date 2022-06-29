@@ -1,5 +1,6 @@
 package com.thalesmelo.reactivecassandra.booking;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -12,11 +13,11 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import com.thalesmelo.reactivecassandra.booking.ContainerBooking.ContainerType;
+import com.thalesmelo.reactivecassandra.booking.api.ContainerBookingReferenceDto;
 import com.thalesmelo.reactivecassandra.config.ContainerBookingDto;
 import com.thalesmelo.reactivecassandra.db.EntityReference;
 import com.thalesmelo.reactivecassandra.db.EntityReferenceRepository;
@@ -44,18 +45,9 @@ public class ContainerBookingServiceTest {
 	private ContainerBookingService service = new ContainerBookingService();
 
 	@Test
-	public void givenMockingIsDoneByMockito_whenGetIsCalled_shouldReturnMockedObject() {
+	public void given_validBooking_when_isAvailableIsCalled_shouldReturn_TrueAvailableBooking() {
 
-		Mockito.when(entityReferenceRepository.init(anyString())).thenAnswer(i -> Mono.just(getReference(0L)));
-
-		Mockito.when(entityReferenceRepository.updateReference(anyString(), anyLong()))
-				.thenAnswer(i -> Mono.just(getReference(1L)));
-		
-		Mockito.when(externalService.postForEntity(any(), any(),any()))
-		.thenAnswer(i -> ResponseEntity.ok(2));
-
-		Mockito.when(externalService.getForEntity("https://maersk.com/api/bookings/checkAvailable", Integer.class))
-				.thenReturn(new ResponseEntity(1, HttpStatus.OK));
+		Mockito.when(externalService.postForEntity(any(), any(), any())).thenAnswer(i -> ResponseEntity.ok(2));
 
 		ContainerBookingDto booking = new ContainerBookingDto(UUID.randomUUID(), ContainerType.DRY.name(), "origin",
 				"destination", 20, 10, Instant.now());
@@ -63,6 +55,45 @@ public class ContainerBookingServiceTest {
 
 		StepVerifier.create(mono).expectNext(new AvailableBookingDto(true)).verifyComplete();
 	}
+
+	@Test
+	public void given_InvalidTypeBooking_when_CreateBookingIsCalled_shouldThrowException() {
+		ContainerBookingDto booking = new ContainerBookingDto(UUID.randomUUID(), "NONE", "origin",
+				"destination", 20, 10, Instant.now());
+
+		IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+				() -> service.createBooking(booking),
+				"Expected service.createBooking(booking) to throw, but it didn't");
+	}
+	
+	@Test
+	public void given_InvalidContainerSizeBooking_when_CreateBookingIsCalled_shouldThrowException() {
+		ContainerBookingDto booking = new ContainerBookingDto(UUID.randomUUID(), ContainerType.DRY.name(), "origin",
+				"destination", 5, 10, Instant.now());
+		
+		IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+				() -> service.createBooking(booking),
+				"Expected service.createBooking(booking) to throw, but it didn't");
+	}
+
+	@Test
+	public void given_validBooking_when_CreateBookingIsCalled_shouldReturn_Booking() {
+
+		Mockito.when(entityReferenceRepository.updateReference(anyString(), anyLong()))
+				.thenAnswer(i -> Mono.just(getReference(2L)));
+		Mockito.when(entityReferenceRepository.findByEntityName(anyString()))
+				.thenAnswer(i -> Mono.just(getReference(1L)));
+
+		Mockito.when(repository.save(any())).thenAnswer(i -> Mono.just(i.getArguments()[0]));
+		Mockito.when(bookingReferenceRepository.save(any())).thenAnswer(i -> Mono.just(i.getArguments()[0]));
+
+		ContainerBookingDto booking = new ContainerBookingDto(UUID.randomUUID(), ContainerType.DRY.name(), "origin",
+				"destination", 20, 10, Instant.now());
+		Mono<ContainerBookingReferenceDto> mono = service.createBooking(booking);
+
+		StepVerifier.create(mono).expectNext(new ContainerBookingReferenceDto("0000000000000000002")).verifyComplete();
+	}
+
 
 	private EntityReference getReference(Long current) {
 		return new EntityReference(ContainerBookingReference.class.getSimpleName(), current, current + 1);
