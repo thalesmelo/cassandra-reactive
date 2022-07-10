@@ -26,7 +26,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-		"external.service.check.container.availabilty.url=https://maersk.com/api/bookings/checkAvailable" })
+		"external.service.check.container.availabilty.url=https://company.com/api/bookings/checkAvailable" })
 public class ContainerBookingServiceTest {
 
 	@MockBean
